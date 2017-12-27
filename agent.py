@@ -1,0 +1,11 @@
+import numpy as np
+
+class Agent:
+
+	def __init__(self, name):
+
+		self.name = name
+
+	def make_move(self, current_state):
+
+		return current_state
