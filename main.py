@@ -1,4 +1,6 @@
+import sys
 import math
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, ConnectionPatch, RegularPolygon, Shadow
@@ -25,6 +27,7 @@ class Main:
 		
 		# start with an empty state
 		self.current_state = State()
+		self.img_nr = -1
 
 		# create the figure
 		self.fig = plt.figure(figsize=(Main.fig_size, Main.fig_size), facecolor=self.board_color)
@@ -85,7 +88,7 @@ class Main:
 		self.ax.add_patch(self.wizard)
 
 		# create event hook for mouse clicks
-		self.fig.canvas.mpl_connect('button_press_event', self.button_press)
+		self.fig.canvas.mpl_connect('button_press_event', self.random_test_sequence)
 		
 
 	def graphic_location(self, l, r, c):
@@ -116,21 +119,84 @@ class Main:
 	def button_press(self, event):
 		"""Handle mouse clicks"""
 
-		x, y = map(float, (event.xdata, event.ydata))
+		# x, y = map(float, (event.xdata, event.ydata))
 
-		for l in range(State.BOARD_SIZE):
-			for r in range(State.BOARD_SIZE):
-				for c in range(State.BOARD_SIZE):
-					if (r, c) != (State.GAP_SPOT, State.GAP_SPOT):
+		# for l in range(State.BOARD_SIZE):
+		# 	for r in range(State.BOARD_SIZE):
+		# 		for c in range(State.BOARD_SIZE):
+		# 			if (r, c) != (State.GAP_SPOT, State.GAP_SPOT):
 						
-						sx, sy = self.graphic_location(l, r, c)
+		# 				sx, sy = self.graphic_location(l, r, c)
 
-						if math.sqrt((x - sx)**2 + (y - sy)**2) < self.spot_radius:
-							self.current_state.board[l, r, c] = self.current_state.player_to_move
-							self.current_state.change_turn()
-							self.update_graphical_board()
-							return
+		# 				if math.sqrt((x - sx)**2 + (y - sy)**2) < self.spot_radius:
+		# 					self.current_state.board[l, r, c] = self.current_state.player_to_move
+		# 					self.current_state.change_turn()
+		# 					self.update_graphical_board()
+		# 					return
 
+
+
+	###################### RANDOMELI ######################
+
+	def display_states_test(self, event):
+
+		board = np.asarray([
+			[[0, 0, 0], [0, -1, 0], [0, 0, 0]],
+			[[1, 1, 1], [0, -1, 0], [0, 0, 0]],
+			[[2, 2, 2], [0, -1, 0], [0, 0, 0]]
+			], dtype=np.int8)
+
+		self.current_state = State(board)
+		self.current_state.cows = [0, 0]
+		self.current_state.player_to_move = 2
+		self.current_state.can_capture = False
+		self.update_graphical_board()
+
+		print('Initial : to_move ', self.current_state.player_to_move)
+		print('          cows    ', self.current_state.cows)
+		print('          capture ', self.current_state.can_capture, '\n')
+
+
+		if self.img_nr == -1:
+			self.img_nr = 0
+			return
+
+		next_states = self.current_state.expand_states()
+		print(self.img_nr, " / ", len(next_states), " states")
+
+		if (len(next_states) == 0):
+			print('Winner is ', self.current_state.winner)
+			sys.exit()
+		
+		if self.img_nr < len(next_states):
+			self.current_state = next_states[self.img_nr]
+			self.update_graphical_board()
+			print('After   : to_move ', self.current_state.player_to_move)
+			print('          cows    ', self.current_state.cows)
+			print('          capture ', self.current_state.can_capture, '\n')
+		else:
+			sys.exit('no more states')
+		self.img_nr += 1
+
+
+	def random_test_sequence(self, event):
+
+		print('State   : to_move ', self.current_state.player_to_move)
+		print('          cows    ', self.current_state.cows)
+		print('          capture ', self.current_state.can_capture, '\n')
+		self.update_graphical_board()
+
+		next_states = self.current_state.expand_states()
+		print(len(next_states), ' possible next states')
+
+		if (len(next_states) == 0):
+			print('Winner is ', self.current_state.winner)
+			sys.exit()
+
+		rnd = np.random.randint(0, len(next_states))
+		self.current_state = next_states[rnd]
+
+	#######################################################
 
 if __name__ == '__main__':
 

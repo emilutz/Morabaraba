@@ -7,6 +7,7 @@ class State:
 	BOARD_SIZE = 3
 	GAP_SPOT = 1
 	MAX_COWS = 12
+	MIN_COWS = 3
 	EMPTY = 0
 
 	def __init__(self, board=np.zeros(
@@ -21,10 +22,13 @@ class State:
 		self.player_to_move = player_to_move
 
 		# set the number of cows
-		self.cows = [self.MAX_COWS, self.MAX_COWS]
+		self.cows = cows
 
 		# set the flags
 		self.can_capture = False
+
+		# the winner variable (only assigned at the end of the game)
+		self.winner = None
 
 
 	def check_mill(self, player, level, row, column):
@@ -75,7 +79,7 @@ class State:
 			              copy(self.cows))
 
 		# verify if mill has been formed
-		if self.check_mill(self.player_to_move,
+		if new_state.check_mill(self.player_to_move,
 		 destination[0],
 		 destination[1],
 		 destination[2]):
@@ -86,14 +90,24 @@ class State:
 
 
 	def game_over(self):
-		"""Checks if the game is over and returns the index
-		of the winning player if so; otherwise it returns 0"""
+		"""Checks if one of the players has less than the minimum
+		admissible number of cows left and sets the other player
+		as the winner of the match; It also declares a draw if both
+		players have the minimum amount of cows left"""
+
+		num_cows = [None, None]
 
 		for i in range(2):
-			if self.cows[i] + np.sum(self.board == i + 1) < 3:
-				return 2 - i
+			num_cows[i] = self.cows[i] + np.sum(self.board == i + 1)
+			if num_cows[i] < State.MIN_COWS:
+				self.winner =  2 - i
+				return True
 
-		return 0
+		if num_cows == [State.MIN_COWS, State.MIN_COWS]:
+			self.winner = 0
+			return True
+
+		return False
 
 
 
@@ -157,14 +171,14 @@ class State:
 								# create the new state
 								new_state = State(new_board,
 									              new_player_to_move,
-									              new_cows)
+									              cows=new_cows)
 
 								# verify if mill has been formed
-								if self.check_mill(self.player_to_move, l, r, c):
+								if new_state.check_mill(self.player_to_move, l, r, c):
 									new_state.can_capture = True
 									new_state.player_to_move = self.player_to_move	
 
-								expand_states.append(new_state)
+								states_expanded.append(new_state)
 
 								
 			# no more cows left to be added
@@ -228,9 +242,10 @@ class State:
 												if self.board[l2, r2, c2] == State.EMPTY:
 													new_state = self.move_cow(self.player_to_move,
 														            (l, r, c), (l2, r2, c2))
-													expand_states.append(new_state)
+													states_expanded.append(new_state)
 
+		# player has nowhere to move and therefore he lost
+		if states_expanded == []:
+			self.winner = 3 - self.player_to_move
 
-
-
-
+		return states_expanded
