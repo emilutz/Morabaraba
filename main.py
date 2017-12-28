@@ -7,15 +7,19 @@ from matplotlib.patches import Circle, ConnectionPatch, RegularPolygon, Shadow
 
 from state import *
 from agent import *
+from human_agent import *
+from random_agent import *
+
 
 class Main:
 	"""The central part of the program"""
 
 	wizard_color = '#FCFF54'
 	board_color = '#EF924F'
+	selected_color = '#AFFFD4'
 	spot_color = ['#FFFFFF', '#FF0000', '#0000FF']
 
-	fig_size = 5
+	fig_size = 5.5
 	fig_pad  = 0.25
 	spot_radius = 0.15
 
@@ -23,19 +27,31 @@ class Main:
 	fig_unit = (fig_mid - fig_pad) / State.BOARD_SIZE
 
 
-	def __init__(self):
+	def __init__(self, agent1, agent2):
 		
+		# assign the agents
+		self.players = [agent1, agent2]
+
 		# start with an empty state
 		self.current_state = State()
 		self.img_nr = -1
 
 		# create the figure
 		self.fig = plt.figure(figsize=(Main.fig_size, Main.fig_size), facecolor=self.board_color)
+		self.fig.suptitle('Good Luck !', fontsize=12, fontweight='bold')
 
 		self.ax = self.fig.add_axes((0.05, 0.05, 0.9, 0.9),
                                     aspect='equal', frameon=False,
                                     xlim=(-0.05, Main.fig_size + 0.05),
                                     ylim=(-0.05, Main.fig_size + 0.05))
+
+		self.cows_left = [
+		self.ax.text(4 * Main.fig_pad, Main.fig_size, str(self.current_state.cows[0]),
+        bbox={'facecolor':Main.spot_color[1], 'alpha':0.5, 'pad':10}),
+        self.ax.text(Main.fig_size - 4 * Main.fig_pad, Main.fig_size, str(self.current_state.cows[0]),
+        bbox={'facecolor':Main.spot_color[2], 'alpha':0.5, 'pad':10})
+        ]
+
 
 		for axis in (self.ax.xaxis, self.ax.yaxis):
 			axis.set_major_formatter(plt.NullFormatter())
@@ -43,7 +59,7 @@ class Main:
 
 		# create the grid of spots
 		self.spots = np.array([[[Circle(
-			self.graphic_location(l, r, c),
+			self.graphic_location(l, r, c), linewidth=2,
 			facecolor=self.spot_color[0], radius=self.spot_radius)
                           for c in range(State.BOARD_SIZE)]
                          for r in range(State.BOARD_SIZE)]
@@ -87,8 +103,12 @@ class Main:
 			edgecolor=self.spot_color[self.current_state.player_to_move])
 		self.ax.add_patch(self.wizard)
 
+		# store the selected entity (for moving pieces)
+		self.selected = None
+
 		# create event hook for mouse clicks
-		self.fig.canvas.mpl_connect('button_press_event', self.random_test_sequence)
+		self.fig.canvas.mpl_connect('button_press_event', self.button_press)
+		self.fig.canvas.mpl_connect('button_release_event', self.button_release)
 		
 
 	def graphic_location(self, l, r, c):
@@ -116,24 +136,143 @@ class Main:
 		self.fig.canvas.draw()
 
 
+	def spot_clicked(self, x, y):
+		"""Maps click locations to actual entities lying on the board"""
+
+		for l in range(State.BOARD_SIZE):
+			for r in range(State.BOARD_SIZE):
+				for c in range(State.BOARD_SIZE):
+
+					sx, sy = self.graphic_location(l, r, c)
+
+					if math.sqrt((x - sx)**2 + (y - sy)**2) < self.spot_radius:
+						if (r, c) == (State.GAP_SPOT, State.GAP_SPOT):
+							return "wizard"
+						else:
+							return (l, r, c)
+
 	def button_press(self, event):
+
+		x, y = map(float, (event.xdata, event.ydata))
+		self.selected = self.spot_clicked(x, y)
+
+		try:
+			if self.current_state.board[self.selected] == self.current_state.player_to_move \
+			and sum(self.current_state.cows) == 0:
+				self.spots[self.selected].set_edgecolor(self.selected_color)
+				self.fig.canvas.draw()
+		except IndexError:
+			pass
+		except ValueError:
+			pass
+		
+
+					
+	def button_release(self, event):
 		"""Handle mouse clicks"""
 
-		# x, y = map(float, (event.xdata, event.ydata))
+		player = self.players[self.current_state.player_to_move - 1]
 
-		# for l in range(State.BOARD_SIZE):
-		# 	for r in range(State.BOARD_SIZE):
-		# 		for c in range(State.BOARD_SIZE):
-		# 			if (r, c) != (State.GAP_SPOT, State.GAP_SPOT):
-						
-		# 				sx, sy = self.graphic_location(l, r, c)
+		x, y = map(float, (event.xdata, event.ydata))
+		clicked = self.spot_clicked(x, y)
 
-		# 				if math.sqrt((x - sx)**2 + (y - sy)**2) < self.spot_radius:
-		# 					self.current_state.board[l, r, c] = self.current_state.player_to_move
-		# 					self.current_state.change_turn()
-		# 					self.update_graphical_board()
-		# 					return
+		self.fig.suptitle('')
+		self.fig.canvas.draw()
 
+
+		#------------------------[ player is human ]------------------------#
+		
+		if isinstance(player, HumanAgent):
+			
+			# possible next board configurations
+			possible_next_states = self.current_state.expand_states()
+			possible_configurations = [state.board for state in possible_next_states]
+
+			current_board = np.copy(self.current_state.board)
+
+			# no moves can be made
+			if len(possible_next_states) == 0:
+				windex = self.current_state.winner
+				if windex:
+					self.fig.suptitle(self.players[windex - 1].name + ' wins !', fontsize=12, fontweight='bold')
+				else:
+					self.fig.suptitle('Draw', fontsize=12, fontweight='bold')
+				self.fig.canvas.draw()
+				return
+
+			# air clicks do not count
+			if self.selected == None or clicked == None:
+				return
+
+			# not allowed to touch its majesty
+			if self.selected == 'wizard' or clicked == 'wizard':
+				self.fig.suptitle("Don't touch the wizard !", fontsize=12, fontweight='bold')
+				self.fig.canvas.draw()
+				return
+
+			# clicked and released same entity
+			if clicked == self.selected:
+				# add a new cow on an empty spot
+				if current_board[clicked] == State.EMPTY:
+					current_board[clicked] = self.current_state.player_to_move
+				# capture opponent's piece
+				elif current_board[clicked] == 3 - self.current_state.player_to_move:
+					current_board[clicked] = State.EMPTY
+			# clicked on different spots
+			elif current_board[self.selected] == self.current_state.player_to_move:
+				current_board[self.selected] = State.EMPTY
+				current_board[clicked] = self.current_state.player_to_move
+
+
+			# verify if the move is valid
+			state_valid = False
+			for i, possible_board in enumerate(possible_configurations):
+				if np.all(possible_board == current_board):
+					state_valid = True
+					state_index = i
+					break
+
+			if state_valid:
+				self.current_state = possible_next_states[state_index]
+				self.update_graphical_board()
+			else:
+				self.fig.suptitle('Invalid move !', fontsize=12, fontweight='bold')
+				self.fig.canvas.draw()
+
+
+			# flush the mouse press
+			if self.selected not in [None, 'wizard']:
+				self.spots[self.selected].set_edgecolor(None)
+				self.selected = None
+
+
+		#------------------------[ player is AI ]------------------------#
+		
+		else:
+			if clicked == "wizard" and self.selected == 'wizard':
+				next_state = player.make_move(self.current_state)
+
+				# no move returned
+				if next_state == None:
+					windex = self.current_state.winner
+					if windex:
+						self.fig.suptitle(self.players[windex - 1].name + ' wins !', fontsize=12, fontweight='bold')
+					else:
+						self.fig.suptitle('Draw', fontsize=12, fontweight='bold')
+					self.fig.canvas.draw()
+					return
+				else:
+					self.current_state = next_state
+					self.update_graphical_board()
+
+
+		if self.current_state.can_capture:
+			self.fig.suptitle('Mill ! Shoot a cow !', fontsize=12, fontweight='bold')
+
+		for i in range(2):
+			self.cows_left[i].set_text(str(self.current_state.cows[i]))
+		
+		self.fig.canvas.draw()
 
 
 	###################### RANDOMELI ######################
@@ -198,7 +337,12 @@ class Main:
 
 	#######################################################
 
+
 if __name__ == '__main__':
 
-	runner = Main()
+	margi = RandomAgent(name='Margi')
+	randomGuy = RandomAgent(name='Random Guy')
+	me = HumanAgent(name='emilutz')
+
+	runner = Main(margi, randomGuy)
 	plt.show()
