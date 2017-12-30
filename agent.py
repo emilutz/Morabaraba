@@ -10,4 +10,8 @@ class Agent:
 
 	def make_move(self, current_state):
 
-		return current_state
+		next_states = current_state.expand_states()
+		if len(next_states) == 0:
+			return None
+		else:
+			return next_states[0]

@@ -6,9 +6,13 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, ConnectionPatch, RegularPolygon, Shadow
 
 from state import *
+from search_state import *
+
 from agent import *
 from human_agent import *
 from random_agent import *
+from search_agent import *
+
 
 
 class Main:
@@ -48,9 +52,15 @@ class Main:
 		self.cows_left = [
 		self.ax.text(4 * Main.fig_pad, Main.fig_size, str(self.current_state.cows[0]),
         bbox={'facecolor':Main.spot_color[1], 'alpha':0.5, 'pad':10}),
-        self.ax.text(Main.fig_size - 4 * Main.fig_pad, Main.fig_size, str(self.current_state.cows[0]),
+        self.ax.text(Main.fig_size - 5 * Main.fig_pad, Main.fig_size, str(self.current_state.cows[0]),
         bbox={'facecolor':Main.spot_color[2], 'alpha':0.5, 'pad':10})
         ]
+
+		self.player_names = [
+		self.ax.text(-0.5 * Main.fig_pad, Main.fig_size, agent1.name,
+		 fontsize=14, color=Main.spot_color[1]),
+		self.ax.text(Main.fig_size - 2.5 * Main.fig_pad, Main.fig_size, agent2.name,
+		 fontsize=14, color=Main.spot_color[2])]
 
 
 		for axis in (self.ax.xaxis, self.ax.yaxis):
@@ -107,8 +117,8 @@ class Main:
 		self.selected = None
 
 		# create event hook for mouse clicks
-		self.fig.canvas.mpl_connect('button_press_event', self.button_press)
-		self.fig.canvas.mpl_connect('button_release_event', self.button_release)
+		self.fig.canvas.mpl_connect('button_press_event', self.display_features_test)
+		# self.fig.canvas.mpl_connect('button_release_event', self.button_release)
 		
 
 	def graphic_location(self, l, r, c):
@@ -277,72 +287,123 @@ class Main:
 
 	###################### RANDOMELI ######################
 
-	def display_states_test(self, event):
+	# def display_states_test(self, event):
 
-		board = np.asarray([
-			[[0, 0, 0], [0, -1, 0], [0, 0, 0]],
-			[[1, 1, 1], [0, -1, 0], [0, 0, 0]],
-			[[2, 2, 2], [0, -1, 0], [0, 0, 0]]
-			], dtype=np.int8)
+	# 	board = np.asarray([
+	# 		[[0, 0, 0], [0, -1, 0], [0, 0, 0]],
+	# 		[[1, 1, 1], [0, -1, 0], [0, 0, 0]],
+	# 		[[2, 2, 2], [0, -1, 0], [0, 0, 0]]
+	# 		], dtype=np.int8)
 
-		self.current_state = State(board)
-		self.current_state.cows = [0, 0]
-		self.current_state.player_to_move = 2
-		self.current_state.can_capture = False
-		self.update_graphical_board()
+	# 	self.current_state = State(board)
+	# 	self.current_state.cows = [0, 0]
+	# 	self.current_state.player_to_move = 2
+	# 	self.current_state.can_capture = False
+	# 	self.update_graphical_board()
 
-		print('Initial : to_move ', self.current_state.player_to_move)
-		print('          cows    ', self.current_state.cows)
-		print('          capture ', self.current_state.can_capture, '\n')
+	# 	print('Initial : to_move ', self.current_state.player_to_move)
+	# 	print('          cows    ', self.current_state.cows)
+	# 	print('          capture ', self.current_state.can_capture, '\n')
 
 
-		if self.img_nr == -1:
-			self.img_nr = 0
-			return
+	# 	if self.img_nr == -1:
+	# 		self.img_nr = 0
+	# 		return
 
-		next_states = self.current_state.expand_states()
-		print(self.img_nr, " / ", len(next_states), " states")
+	# 	next_states = self.current_state.expand_states()
+	# 	print(self.img_nr, " / ", len(next_states), " states")
 
-		if (len(next_states) == 0):
-			print('Winner is ', self.current_state.winner)
-			sys.exit()
+	# 	if (len(next_states) == 0):
+	# 		print('Winner is ', self.current_state.winner)
+	# 		sys.exit()
 		
-		if self.img_nr < len(next_states):
-			self.current_state = next_states[self.img_nr]
-			self.update_graphical_board()
-			print('After   : to_move ', self.current_state.player_to_move)
-			print('          cows    ', self.current_state.cows)
-			print('          capture ', self.current_state.can_capture, '\n')
-		else:
-			sys.exit('no more states')
-		self.img_nr += 1
+	# 	if self.img_nr < len(next_states):
+	# 		self.current_state = next_states[self.img_nr]
+	# 		self.update_graphical_board()
+	# 		print('After   : to_move ', self.current_state.player_to_move)
+	# 		print('          cows    ', self.current_state.cows)
+	# 		print('          capture ', self.current_state.can_capture, '\n')
+	# 	else:
+	# 		sys.exit('no more states')
+	# 	self.img_nr += 1
 
 
-	def random_test_sequence(self, event):
+	# def display_features_test(self, event):
 
-		print('State   : to_move ', self.current_state.player_to_move)
-		print('          cows    ', self.current_state.cows)
-		print('          capture ', self.current_state.can_capture, '\n')
-		self.update_graphical_board()
+	# 	board = np.asarray([
+	# 		[[0, 1, 0], [0, -1, 0], [1, 2, 1]],
+	# 		[[0, 1, 1], [1, -1, 1], [1, 1, 2]],
+	# 		[[1, 0, 0], [2, -1, 0], [1, 0, 1]]
+	# 		], dtype=np.int8)
 
-		next_states = self.current_state.expand_states()
-		print(len(next_states), ' possible next states')
+	# 	self.current_state = SearchState(board)
+	# 	self.current_state.cows = [0, 0]
+	# 	self.current_state.player_to_move = 2
+	# 	self.current_state.can_capture = False
+	# 	self.update_graphical_board()
 
-		if (len(next_states) == 0):
-			print('Winner is ', self.current_state.winner)
-			sys.exit()
+		# print('closed mill',
+		#  self.current_state.closed_mill(self.current_state.player_to_move),
+		#  self.current_state.closed_mill(3 - self.current_state.player_to_move))
 
-		rnd = np.random.randint(0, len(next_states))
-		self.current_state = next_states[rnd]
+		# print('mills number',
+		#  self.current_state.mills_number(self.current_state.player_to_move),
+		#  self.current_state.mills_number(3 - self.current_state.player_to_move))
+
+		# print('blocked cows',
+		#  self.current_state.blocked_cows_number(self.current_state.player_to_move),
+		#  self.current_state.blocked_cows_number(3 - self.current_state.player_to_move))
+
+		# print('number of cows',
+		#  self.current_state.total_cows_difference(self.current_state.player_to_move),
+		#  self.current_state.total_cows_difference(3 - self.current_state.player_to_move))
+
+		# print('2 cow confs',
+		#  self.current_state.cows_configuration_2(self.current_state.player_to_move),
+		#  self.current_state.cows_configuration_2(3 - self.current_state.player_to_move))
+
+		# print('3 cow confs',
+		#  self.current_state.cows_configuration_3(self.current_state.player_to_move),
+		#  self.current_state.cows_configuration_3(3 - self.current_state.player_to_move))
+
+		# print('2 open mills',
+		#  self.current_state.open_mills_2(self.current_state.player_to_move),
+		#  self.current_state.open_mills_2(3 - self.current_state.player_to_move))
+
+		# print('3 open mills',
+		#  self.current_state.open_mills_3(self.current_state.player_to_move),
+		#  self.current_state.open_mills_3(3 - self.current_state.player_to_move))
+
+		# print('winning conf',
+		#  self.current_state.winning_configuration(self.current_state.player_to_move),
+		#  self.current_state.winning_configuration(3 - self.current_state.player_to_move))
+		
+
+
+	# def random_test_sequence(self, event):
+
+	# 	print('State   : to_move ', self.current_state.player_to_move)
+	# 	print('          cows    ', self.current_state.cows)
+	# 	print('          capture ', self.current_state.can_capture, '\n')
+	# 	self.update_graphical_board()
+
+	# 	next_states = self.current_state.expand_states()
+	# 	print(len(next_states), ' possible next states')
+
+	# 	if (len(next_states) == 0):
+	# 		print('Winner is ', self.current_state.winner)
+	# 		sys.exit()
+
+	# 	rnd = np.random.randint(0, len(next_states))
+	# 	self.current_state = next_states[rnd]
 
 	#######################################################
 
 
 if __name__ == '__main__':
 
-	margi = RandomAgent(name='Margi')
-	randomGuy = RandomAgent(name='Random Guy')
-	me = HumanAgent(name='emilutz')
+	random = RandomAgent(name='Random')
+	human = HumanAgent(name='Human')
 
-	runner = Main(margi, randomGuy)
+	runner = Main(human, random)
 	plt.show()

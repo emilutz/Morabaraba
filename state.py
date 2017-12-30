@@ -12,7 +12,8 @@ class State:
 
 	def __init__(self, board=np.zeros(
 		(BOARD_SIZE, BOARD_SIZE, BOARD_SIZE), dtype=np.int8),
-	    player_to_move=1, cows=[MAX_COWS, MAX_COWS]):
+	    player_to_move=1, cows=[MAX_COWS, MAX_COWS],
+	    can_capture=False, winner=None):
 
 		# make sure this board spot remains invalid
 		board[:, self.GAP_SPOT, self.GAP_SPOT] = -1
@@ -25,10 +26,10 @@ class State:
 		self.cows = cows
 
 		# set the flags
-		self.can_capture = False
+		self.can_capture = can_capture
 
 		# the winner variable (only assigned at the end of the game)
-		self.winner = None
+		self.winner = winner
 
 
 	def check_mill(self, player, level, row, column):
