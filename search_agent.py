@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 from agent import *
@@ -6,12 +7,13 @@ from search_state import *
 
 class SearchAgent(Agent):
 
-	def __init__(self, name, player_index, depth):
+	def __init__(self, name, player_index, expanding_complexity):
 		Agent.__init__(self, name)
 
 		self.name = name
 		self.player_index = player_index
-		self.max_depth = depth
+		self.expanding_complexity = expanding_complexity
+		self.depth_limit = 0
 
 
 	def pass_up(self, node, value, child):
@@ -45,10 +47,8 @@ class SearchAgent(Agent):
 	def process_node(self, node, depth):
 		"""The action of processing a node itself"""
 
-		print('Processing node depth', depth)
-
 		# test depth limit condition
-		if depth == self.max_depth:
+		if depth == self.depth_limit:
 			self.pass_up(node.father,
 			             node.heuristic_value(self.player_index),
 			             node)
@@ -81,10 +81,27 @@ class SearchAgent(Agent):
 		self.pass_up(node.father, node.value, node)
 
 
-
 	def make_move(self, current_state):
 		"""Enforce the agent to make his move"""
 
+		# adjust the depth depending on the branching factor
+		new_states = current_state.expand_states()
+		if len(new_states) > 0:
+			branching_factor = max(len(new_states), 
+				                   len(new_states[0].expand_states()))
+		else:
+			branching_factor = 0
+
+		branching_factor = max(2, branching_factor)
+
+		optimal_depth = math.log(self.expanding_complexity,
+		                         branching_factor)
+
+		self.depth_limit = max(1, round(optimal_depth))
+
+		print('Searching with depth', self.depth_limit)
+
+		# start the tree search
 		root = SearchState(current_state.board,
 		                   current_state.player_to_move,
 		                   current_state.cows,

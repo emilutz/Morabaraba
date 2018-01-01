@@ -414,7 +414,7 @@ class Main:
 if __name__ == '__main__':
 
 	random = RandomAgent(name='Random')
-	search = SearchAgent(name='Sotirios', player_index=2, depth=3)
+	search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=1000)
 	human = HumanAgent(name='Emilutz')
 
 	runner = Main(random, search)
