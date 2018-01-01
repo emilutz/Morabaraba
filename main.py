@@ -18,8 +18,8 @@ from search_agent import *
 class Main:
 	"""The central part of the program"""
 
-	wizard_color = '#FCFF54'
-	board_color = '#EF924F'
+	wizard_color = '#F7B738'
+	board_color = '#BCE0DF'
 	selected_color = '#AFFFD4'
 	spot_color = ['#FFFFFF', '#FF0000', '#0000FF']
 
@@ -117,16 +117,16 @@ class Main:
 		self.selected = None
 
 		# create event hook for mouse clicks
-		self.fig.canvas.mpl_connect('button_press_event', self.display_features_test)
-		# self.fig.canvas.mpl_connect('button_release_event', self.button_release)
+		self.fig.canvas.mpl_connect('button_press_event', self.button_press)
+		self.fig.canvas.mpl_connect('button_release_event', self.button_release)
 		
 
 	def graphic_location(self, l, r, c):
 		"""Maps the mathematical 3 dimensional index of a board state
 		to the location in the graphical user interface board"""
 
-		return (Main.fig_mid + (r - 1) * (State.BOARD_SIZE - l) * Main.fig_unit,
-			Main.fig_mid + (c - 1) * (State.BOARD_SIZE - l) * Main.fig_unit)
+		return (Main.fig_mid + (c - 1) * (State.BOARD_SIZE - l) * Main.fig_unit,
+			Main.fig_mid + (r - 1) * (State.BOARD_SIZE - l) * Main.fig_unit)
 
 
 	def update_graphical_board(self):
@@ -295,9 +295,9 @@ class Main:
 	# 		[[2, 2, 2], [0, -1, 0], [0, 0, 0]]
 	# 		], dtype=np.int8)
 
-	# 	self.current_state = State(board)
-	# 	self.current_state.cows = [0, 0]
-	# 	self.current_state.player_to_move = 2
+	# 	self.current_state = SearchState(board)
+	# 	self.current_state.cows = [5, 5]
+	# 	self.current_state.player_to_move = 1
 	# 	self.current_state.can_capture = False
 	# 	self.update_graphical_board()
 
@@ -322,7 +322,8 @@ class Main:
 	# 		self.update_graphical_board()
 	# 		print('After   : to_move ', self.current_state.player_to_move)
 	# 		print('          cows    ', self.current_state.cows)
-	# 		print('          capture ', self.current_state.can_capture, '\n')
+	# 		print('          capture ', self.current_state.can_capture)
+	# 		print('        : past cows', self.current_state.father.cows, '\n')
 	# 	else:
 	# 		sys.exit('no more states')
 	# 	self.img_nr += 1
@@ -331,16 +332,24 @@ class Main:
 	# def display_features_test(self, event):
 
 	# 	board = np.asarray([
-	# 		[[0, 1, 0], [0, -1, 0], [1, 2, 1]],
-	# 		[[0, 1, 1], [1, -1, 1], [1, 1, 2]],
-	# 		[[1, 0, 0], [2, -1, 0], [1, 0, 1]]
+	# 		[[0, 0, 0], [1, -1, 1], [1, 1, 2]],
+	# 		[[1, 1, 0], [2, -1, 1], [2, 2, 2]],
+	# 		[[1, 2, 1], [1, -1, 0], [2, 1, 1]]
 	# 		], dtype=np.int8)
 
-	# 	self.current_state = SearchState(board)
-	# 	self.current_state.cows = [0, 0]
-	# 	self.current_state.player_to_move = 2
-	# 	self.current_state.can_capture = False
-	# 	self.update_graphical_board()
+		# board = np.asarray([
+		# 	[[0, 0, 0], [0, -1, 0], [0, 0, 0]],
+		# 	[[0, 0, 0], [0, -1, 0], [0, 0, 0]],
+		# 	[[0, 0, 0], [0, -1, 0], [0, 0, 0]]
+		# 	], dtype=np.int8)
+
+		# board[0, 0, 1] = 1
+
+		# self.current_state = SearchState(board)
+		# self.current_state.cows = [0, 0]
+		# self.current_state.player_to_move = 2
+		# self.current_state.can_capture = False
+		# self.update_graphical_board()
 
 		# print('closed mill',
 		#  self.current_state.closed_mill(self.current_state.player_to_move),
@@ -377,6 +386,8 @@ class Main:
 		# print('winning conf',
 		#  self.current_state.winning_configuration(self.current_state.player_to_move),
 		#  self.current_state.winning_configuration(3 - self.current_state.player_to_move))
+
+		# print('heuristic value', self.current_state.heuristic_value(1))
 		
 
 
@@ -403,7 +414,8 @@ class Main:
 if __name__ == '__main__':
 
 	random = RandomAgent(name='Random')
-	human = HumanAgent(name='Human')
+	search = SearchAgent(name='Sotirios', player_index=2, depth=3)
+	human = HumanAgent(name='Emilutz')
 
-	runner = Main(human, random)
+	runner = Main(random, search)
 	plt.show()

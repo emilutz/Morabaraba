@@ -14,6 +14,7 @@ class SearchState(State):
 
 		self.father = father
 		self.is_maximizer = is_maximizer
+		self.best_child = None
 
 		self.alpha = - math.inf
 		self.beta  = math.inf
@@ -29,6 +30,53 @@ class SearchState(State):
 		next_states = super(SearchState, self).expand_states()
 		return [SearchState(s.board, s.player_to_move, s.cows, s.can_capture,
 		 s.winner, self, not self.is_maximizer) for s in next_states]
+
+	#-------------------[ heuristic function ]------------------#
+
+	def heuristic_value(self, player):
+		"""Returns the value of the state according to
+		the heuristic function and its parameters"""
+
+		# placing phase
+		if self.cows[player - 1] > 0:
+
+			weights = [18, 26, 1, 6, 12, 7]
+			features = [
+				self.closed_mill(player),
+				self.mills_number(player),
+				self.blocked_cows_number(player),
+				self.total_cows_difference(player),
+				self.cows_configuration_2(player),
+				self.cows_configuration_3(player)
+			]
+
+		# moving phase
+		elif np.sum(self.board == player) > 3:
+
+			weights = [14, 43, 10, 8, 7, 42, 1086]
+			features = [
+				self.closed_mill(player),
+				self.mills_number(player),
+				self.blocked_cows_number(player),
+				self.total_cows_difference(player),
+				self.open_mills_2(player),
+				self.open_mills_3(player),
+				self.winning_configuration(player)
+			]
+
+		# flying phase
+		else:
+
+			weights = [10, 1, 16, 1190]
+			features = [
+				self.cows_configuration_2(player),
+				self.cows_configuration_3(player),
+				self.closed_mill(player),
+				self.winning_configuration(player)
+			]
+
+
+		return np.dot(weights, features)
 
 
 	#-------------------[ feature functions ]-------------------#
@@ -292,9 +340,6 @@ class SearchState(State):
 								villain_semimills_count += 1
 							villain_semimills += cow_2_confs
 
-
-		print(hero_semimills_count, villain_semimills_count)
-
 		return hero_semimills_count - villain_semimills_count
 
 
@@ -302,8 +347,8 @@ class SearchState(State):
 		"""Return the difference between hero's number of mills which 
 		need one more cow to be completed in moving phase, and villain's"""
 
-		hero_semimills = 0
-		villain_semimills = 0
+		hero_semimills = []
+		villain_semimills = []
 
 		for l in range(State.BOARD_SIZE):
 			for r in range(State.BOARD_SIZE):
@@ -317,11 +362,13 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, rx, c] == player:
-										hero_semimills += 1
+								if self.board[lx, r, c] == player:
+									hero_semimills.append((l, r, c))
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == player:
+									hero_semimills.append((l, r, c))
 
 					# row semi-mill
 					if np.sum(self.board[l, :, c] == player) == 2:
@@ -329,11 +376,14 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for cx in range(c - 1, c + 2):
-									if cx < 0 or cx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, r, cx] == player:
-										hero_semimills += 1
+								if self.board[lx, r, c] == player:
+									hero_semimills.append((l, r, c))
+							for cx in range(c - 1, c + 2):
+								if cx < 0 or cx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, r, cx] == player:
+									hero_semimills.append((l, r, c))
+
 
 					# level semi-mill
 					if np.sum(self.board[:, r, c] == player) == 2:
@@ -341,11 +391,13 @@ class SearchState(State):
 							for cx in range(c - 1, c + 2):
 								if cx < 0 or cx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[l, rx, cx] == player:
-										hero_semimills += 1
+								if self.board[l, r, cx] == player:
+									hero_semimills.append((l, r, c))
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == player:
+									hero_semimills.append((l, r, c))
 
 					#-----------------------[ villain ]-----------------------#
 					
@@ -355,11 +407,13 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, rx, c] == 3 - player:
-										villain_semimills += 1
+								if self.board[lx, r, c] == 3 - player:
+									villain_semimills.append((l, r, c))
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == 3 - player:
+									villain_semimills.append((l, r, c))
 
 					# row semi-mill
 					if np.sum(self.board[l, :, c] == 3 - player) == 2:
@@ -367,11 +421,14 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for cx in range(c - 1, c + 2):
-									if cx < 0 or cx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, r, cx] == 3 - player:
-										villain_semimills += 1
+								if self.board[lx, r, c] == 3 - player:
+									villain_semimills.append((l, r, c))
+							for cx in range(c - 1, c + 2):
+								if cx < 0 or cx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, r, cx] == 3 - player:
+									villain_semimills.append((l, r, c))
+
 
 					# level semi-mill
 					if np.sum(self.board[:, r, c] == 3 - player) == 2:
@@ -379,14 +436,16 @@ class SearchState(State):
 							for cx in range(c - 1, c + 2):
 								if cx < 0 or cx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[l, rx, cx] == 3 - player:
-										villain_semimills += 1
+								if self.board[l, r, cx] == 3 - player:
+									villain_semimills.append((l, r, c))
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == 3 - player:
+									villain_semimills.append((l, r, c))
 
 
-		return hero_semimills - villain_semimills
+		return len(set(hero_semimills)) - len(set(villain_semimills))
 
 
 	def open_mills_3(self, player):
@@ -412,15 +471,21 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, rx, c] == player:
-										cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
-										if self.board[l, r, cx] != State.EMPTY])
-										if len(set(cow_2_confs) & set(hero_semimills)) > 0:
-											hero_semimills_count += 1
-										hero_semimills += cow_2_confs
+								if self.board[lx, r, c] == player:
+									cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
+									if self.board[l, r, cx] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == player:
+									cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
+									if self.board[l, r, cx] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
 
 					# row semi-mill
 					if np.sum(self.board[l, :, c] == player) == 2:
@@ -428,15 +493,21 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for cx in range(c - 1, c + 2):
-									if cx < 0 or cx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, r, cx] == player:
-										cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
-										if self.board[l, rx, c] != State.EMPTY])
-										if len(set(cow_2_confs) & set(hero_semimills)) > 0:
-											hero_semimills_count += 1
-										hero_semimills += cow_2_confs
+								if self.board[lx, r, c] == player:
+									cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
+									if self.board[l, rx, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
+							for cx in range(c - 1, c + 2):
+								if cx < 0 or cx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, r, cx] == player:
+									cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
+									if self.board[l, rx, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
 
 					# level semi-mill
 					if np.sum(self.board[:, r, c] == player) == 2:
@@ -444,33 +515,45 @@ class SearchState(State):
 							for cx in range(c - 1, c + 2):
 								if cx < 0 or cx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[l, rx, cx] == player:
-										cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
-										if self.board[lx, r, c] != State.EMPTY])
-										if len(set(cow_2_confs) & set(hero_semimills)) > 0:
-											hero_semimills_count += 1
-										hero_semimills += cow_2_confs
+								if self.board[l, r, cx] == player:
+									cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
+									if self.board[lx, r, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == player:
+									cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
+									if self.board[lx, r, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(hero_semimills)) == 1:
+										hero_semimills_count += 1
+									hero_semimills += cow_2_confs
 
 					#-----------------------[ villain ]-----------------------#
 					
-										# column semi-mill
+					# column semi-mill
 					if np.sum(self.board[l, r, :] == 3 - player) == 2:
 						if self.board[l, r, c] == State.EMPTY:
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, rx, c] == 3 - player:
-										cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
-										if self.board[l, r, cx] != State.EMPTY])
-										if len(set(cow_2_confs) & set(villain_semimills)) > 0:
-											villain_semimills_count += 1
-										villain_semimills += cow_2_confs
+								if self.board[lx, r, c] == 3 - player:
+									cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
+									if self.board[l, r, cx] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == 3 - player:
+									cow_2_confs = ([(l, r, cx) for cx in range(State.BOARD_SIZE)
+									if self.board[l, r, cx] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
 
 					# row semi-mill
 					if np.sum(self.board[l, :, c] == 3 - player) == 2:
@@ -478,15 +561,21 @@ class SearchState(State):
 							for lx in range(l - 1, l + 2):
 								if lx < 0 or lx >= State.BOARD_SIZE:
 									continue
-								for cx in range(c - 1, c + 2):
-									if cx < 0 or cx >= State.BOARD_SIZE:
-										continue
-									if self.board[lx, r, cx] == 3 - player:
-										cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
-										if self.board[l, rx, c] != State.EMPTY])
-										if len(set(cow_2_confs) & set(villain_semimills)) > 0:
-											villain_semimills_count += 1
-										villain_semimills += cow_2_confs
+								if self.board[lx, r, c] == 3 - player:
+									cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
+									if self.board[l, rx, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
+							for cx in range(c - 1, c + 2):
+								if cx < 0 or cx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, r, cx] == 3 - player:
+									cow_2_confs = ([(l, rx, c) for rx in range(State.BOARD_SIZE)
+									if self.board[l, rx, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
 
 					# level semi-mill
 					if np.sum(self.board[:, r, c] == 3 - player) == 2:
@@ -494,14 +583,20 @@ class SearchState(State):
 							for cx in range(c - 1, c + 2):
 								if cx < 0 or cx >= State.BOARD_SIZE:
 									continue
-								for rx in range(r - 1, r + 2):
-									if rx < 0 or rx >= State.BOARD_SIZE:
-										continue
-									if self.board[l, rx, cx] == 3 - player:
-										cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
-										if self.board[lx, r, c] != State.EMPTY])
-										if len(set(cow_2_confs) & set(villain_semimills)) > 0:
-											villain_semimills_count += 1
-										villain_semimills += cow_2_confs
+								if self.board[l, r, cx] == 3 - player:
+									cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
+									if self.board[lx, r, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
+							for rx in range(r - 1, r + 2):
+								if rx < 0 or rx >= State.BOARD_SIZE:
+									continue
+								if self.board[l, rx, c] == 3 - player:
+									cow_2_confs = ([(lx, r, c) for lx in range(State.BOARD_SIZE)
+									if self.board[lx, r, c] != State.EMPTY])
+									if len(set(cow_2_confs) & set(villain_semimills)) == 1:
+										villain_semimills_count += 1
+									villain_semimills += cow_2_confs
 
 		return hero_semimills_count - villain_semimills_count
