@@ -5,10 +5,11 @@ from agent import *
 class RandomAgent(Agent):
 	"""Blind agent that just acts randomly"""
 
-	def __init__(self, name):
+	def __init__(self, name, player_index):
 		Agent.__init__(self, name)
 
 		self.name = name
+		self.player_index = player_index
 
 
 	def make_move(self, current_state):

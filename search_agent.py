@@ -67,7 +67,7 @@ class SearchAgent(Agent):
 		for child in children:
 
 			# test prunning condition
-			if node.alpha > node.beta:
+			if node.alpha >= node.beta:
 				self.pass_up(node.father, node.value, node)
 				return
 
@@ -99,7 +99,7 @@ class SearchAgent(Agent):
 
 		self.depth_limit = max(1, round(optimal_depth))
 
-		print('Searching with depth', self.depth_limit)
+		# print('Searching with depth', self.depth_limit)
 
 		# start the tree search
 		root = SearchState(current_state.board,
