@@ -49,8 +49,7 @@ class LearningAgent(Agent):
 
 		# iterate over episodes
 		for e in range(episodes):
-			print('Episode {0}/{1}'.format(e + 1, episodes), flush=True)
-
+	
 			# choose 2 random agents to play
 			perm = np.random.permutation(len(agents))
 
@@ -60,6 +59,9 @@ class LearningAgent(Agent):
 			agent1.player_index = 1
 			agent2.player_index = 2
 			players = [agent1, agent2]
+
+			print('Episode {0}/{1} : {2} vs {3}'.format(
+				e + 1, episodes, agent1.name, agent2.name), flush=True)
 
 			# initialize the state
 			current_state = State()
@@ -141,20 +143,30 @@ class LearningAgent(Agent):
 
 		with open('reinforcement_learning_data/states_file.txt', 'w') as f:
 
-			board_data = np.empty((4 * len(state_dict),
+			augmentations = 6
+
+			board_data = np.empty((augmentations * len(state_dict),
 									State.BOARD_SIZE,
 									State.BOARD_SIZE,
 									State.BOARD_SIZE), dtype=np.float32)
 
-			cows_data = np.empty((4 * len(state_dict),
+			cows_data = np.empty((augmentations * len(state_dict),
 								  2), dtype=np.float32)
 
-			labels = np.empty((4 * len(state_dict),), dtype=np.float32)
+			labels = np.empty((augmentations * len(state_dict),), dtype=np.float32)
 
 			counter = 0
 			for key, value in state_dict.items():
 				
 				f.write('{0} : {1}\n'.format(key, value))
+
+				# mirror board
+				for f in range(1, 3):
+					board_data[counter] = np.flip(np.asarray(key[0]), axis=f)
+					cows_data[counter] = np.asarray([key[1], key[2]])
+					labels[counter] = value[1] / value[0]
+
+					counter += 1
 
 				# rotate board
 				for r in range(4):
