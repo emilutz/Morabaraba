@@ -141,26 +141,28 @@ class LearningAgent(Agent):
 
 		with open('reinforcement_learning_data/states_file.txt', 'w') as f:
 
-			board_data = np.empty((len(state_dict),
+			board_data = np.empty((4 * len(state_dict),
 									State.BOARD_SIZE,
 									State.BOARD_SIZE,
 									State.BOARD_SIZE), dtype=np.float32)
 
-			cows_data = np.empty((len(state_dict),
+			cows_data = np.empty((4 * len(state_dict),
 								  2), dtype=np.float32)
 
-			labels = np.empty((len(state_dict),), dtype=np.float32)
+			labels = np.empty((4 * len(state_dict),), dtype=np.float32)
 
 			counter = 0
 			for key, value in state_dict.items():
 				
 				f.write('{0} : {1}\n'.format(key, value))
 
-				board_data[counter] = np.asarray(key[0])
-				cows_data[counter] = np.asarray([key[1], key[2]])
-				labels[counter] = value[1] / value[0]
+				# rotate board
+				for r in range(4):
+					board_data[counter] = np.rot(np.asarray(key[0]), k=rot, axis=(1, 2))
+					cows_data[counter] = np.asarray([key[1], key[2]])
+					labels[counter] = value[1] / value[0]
 
-				counter += 1
+					counter += 1
 
 			board_data.dump('reinforcement_learning_data/board_data.dat')
 			cows_data.dump('reinforcement_learning_data/cows_data.dat')

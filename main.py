@@ -414,22 +414,22 @@ class Main:
 
 if __name__ == '__main__':
 
-	# random = RandomAgent(name='Random', player_index=2)
-	# pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=5000)
-	# search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=2000)
-	# human = HumanAgent(name='Dawid')
+	random = RandomAgent(name='Random', player_index=2)
+	pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=5000)
+	search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=2000)
+	human = HumanAgent(name='Emilutz')
 
-	# runner = Main(human, search)
-	# plt.show()
+	runner = Main(human, search)
+	plt.show()
 
-	rnd = RandomAgent(name='rnd', player_index=1)
-	ag1 = SearchAgent(name='ag1', player_index=1, expanding_complexity=200)
-	ag2 = SearchAgent(name='ag2', player_index=1, expanding_complexity=400)
-	ag3 = SearchAgent(name='ag2', player_index=1, expanding_complexity=600)
+	# rnd = RandomAgent(name='rnd', player_index=1)
+	# ag1 = SearchAgent(name='ag1', player_index=1, expanding_complexity=200)
+	# ag2 = SearchAgent(name='ag2', player_index=1, expanding_complexity=400)
+	# ag3 = SearchAgent(name='ag2', player_index=1, expanding_complexity=600)
 
-	monty = LearningAgent(name='monty', player_index=0)
+	# monty = LearningAgent(name='monty', player_index=0)
 
-	monty.create_data(8, [rnd, ag1, ag2, ag3])
+	# monty.create_data(8, [rnd, ag1, ag2, ag3])
 
 
 	# runner = Main(ag1, ag2)
