@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import tensorflow as tf
 
 from agent import *
 from state import *
@@ -40,7 +41,7 @@ class LearningAgent(Agent):
 		return (self.totuple(board), my_cows, en_cows)
 
 
-	def create_data(self, episodes, agents):
+	def create_data(self, episodes, agents, batch_index):
 		"""Run a series of episodes between some agents
 		and create a dataset for value approximation"""
 
@@ -141,52 +142,94 @@ class LearningAgent(Agent):
 					state_dict[states_track_2[i]] = [1, (alpha ** i) * outcome_2]
 
 
-		with open('reinforcement_learning_data/states_file.txt', 'w') as f:
+			if (e + 1) % 25 == 0 or e + 1 == episodes:
+				print('Saving data...', flush=True)
 
-			augmentations = 6
+				with open('reinforcement_learning_data/states_file_' + str(batch_index) + '.txt', 'w') as f:
 
-			board_data = np.empty((augmentations * len(state_dict),
-									State.BOARD_SIZE,
-									State.BOARD_SIZE,
-									State.BOARD_SIZE), dtype=np.float32)
+					augmentations = 6
 
-			cows_data = np.empty((augmentations * len(state_dict),
-								  2), dtype=np.float32)
+					board_data = np.empty((augmentations * len(state_dict),
+											State.BOARD_SIZE,
+											State.BOARD_SIZE,
+											State.BOARD_SIZE), dtype=np.float32)
 
-			labels = np.empty((augmentations * len(state_dict),), dtype=np.float32)
+					cows_data = np.empty((augmentations * len(state_dict),
+										  2), dtype=np.float32)
 
-			counter = 0
-			for key, value in state_dict.items():
+					labels = np.empty((augmentations * len(state_dict),), dtype=np.float32)
+
+					counter = 0
+					for key, value in state_dict.items():
+						
+						f.write('{0} : {1}\n'.format(key, value))
+
+						# mirror board
+						for fl in range(1, 3):
+							board_data[counter] = np.flip(np.asarray(key[0]), axis=fl)
+							cows_data[counter] = np.asarray([key[1], key[2]])
+							labels[counter] = value[1] / value[0]
+
+							counter += 1
+
+						# rotate board
+						for rot in range(4):
+							board_data[counter] = np.rot90(np.asarray(key[0]), k=rot, axes=(1, 2))
+							cows_data[counter] = np.asarray([key[1], key[2]])
+							labels[counter] = value[1] / value[0]
+
+							counter += 1
+
+					board_data.dump('reinforcement_learning_data/board_data_' + str(batch_index) + '.dat')
+					cows_data.dump('reinforcement_learning_data/cows_data_' + str(batch_index) + '.dat')
+					labels.dump('reinforcement_learning_data/labels_' + str(batch_index) + '.dat')
+
+
+
+	def train_value_function_approximation(self):
+		"""Train a neural network to do value function approximation"""
+
+		batch_size = 192
+
+		with tf.device('/gpu:0'):
+
+			# data inputs
+			board_input = tf.placeholder(tf.float32, name='board_input', shape=[batch_size, 3, 3, 3])
+			cows_input  = tf.placeholder(tf.float32, name='cows_input', shape=[batch_size, 2])
+			labels      = tf.placeholder(tf.float32, name='labels', shape=[batch_size,])
+
+			# dropout probability
+			prob = tf.placeholder_with_default(1.0, shape=())
+
+
+			with tf.variable_scope('conv') as scope:
+
+				kernel = tf.get_variable('weights', initializer=tf.truncated_normal([3, 3, 3, 64],
+		                                                          dtype=tf.float32,
+		                                                          mean=0,
+		                                                          stddev=1e-1))
+
+				bias   = tf.get_variable('bias', initializer=tf.truncated_normal([1, 1, 1, 64],
+		                                                          dtype=tf.float32,
+		                                                          mean=0,
+		                                                          stddev=1e-1))
+
+				conv = tf.nn.conv2d(board_input, kernel, [1, 1, 1, 1], padding='VALID')
+				out  = tf.nn.bias_add(conv, bias)
+				conv_activated = tf.nn.relu(out, name='conv_output')
+
+
+			with tf.variable_scope('layer_1') as scope:
+
+				conv_board_shape = conv_activated.get_shape()
+				flat_board_shape = int(np.prod(conv_board_shape[1:]))
+				flat_board = tf.reshape(conv_activated, [batch_size, flat_board_shape])
+
+				weights = tf.get_variable('weights', initializer=tf.truncated_normal([flat_board_shape, ],
+		                                                          dtype=tf.float32,
+		                                                          mean=0,
+		                                                          stddev=1e-1))
 				
-				f.write('{0} : {1}\n'.format(key, value))
-
-				# mirror board
-				for f in range(1, 3):
-					board_data[counter] = np.flip(np.asarray(key[0]), axis=f)
-					cows_data[counter] = np.asarray([key[1], key[2]])
-					labels[counter] = value[1] / value[0]
-
-					counter += 1
-
-				# rotate board
-				for r in range(4):
-					board_data[counter] = np.rot(np.asarray(key[0]), k=rot, axis=(1, 2))
-					cows_data[counter] = np.asarray([key[1], key[2]])
-					labels[counter] = value[1] / value[0]
-
-					counter += 1
-
-			board_data.dump('reinforcement_learning_data/board_data.dat')
-			cows_data.dump('reinforcement_learning_data/cows_data.dat')
-			labels.dump('reinforcement_learning_data/labels.dat')
-
-
-
-
-
-
-
-
 
 
 

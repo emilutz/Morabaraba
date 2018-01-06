@@ -415,23 +415,26 @@ class Main:
 if __name__ == '__main__':
 
 	# random = RandomAgent(name='Random', player_index=2)
-	# pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=5000)
-	# search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=2000)
+	# pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=500)
+	# search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=400)
 	# human = HumanAgent(name='Emilutz')
 
-	# runner = Main(human, search)
+	# runner = Main(pulica, search)
 	# plt.show()
 
 	agents = []
-	agents.append(RandomAgent(name='Random', player_index=1))
-	agents.append(SearchAgent(name='Sotirios_500', player_index=1, expanding_complexity=500))
-	agents.append(SearchAgent(name='Sotirios_750', player_index=1, expanding_complexity=750))
-	agents.append(SearchAgent(name='Sotirios_1000', player_index=1, expanding_complexity=1000))
-	agents.append(SearchAgent(name='Sotirios_2000', player_index=1, expanding_complexity=2000))
 
-	monty = LearningAgent(name='monty', player_index=0)
+	for i in range(2):
+		agents.append(RandomAgent(name='Random_' + str(i + 1), player_index=1))
 
-	monty.create_data(8, agents)
+	for i in range(2000, 3001, 100):
+		agents.append(SearchAgent(name='Sotirios_' + str(i), player_index=1, expanding_complexity=i))
+
+	print(len(agents), 'agents playing')
+
+	monty = LearningAgent(name='monty', player_index=1)
+
+	monty.create_data(2500, agents, 9)
 
 
 	# runner = Main(ag1, ag2)
