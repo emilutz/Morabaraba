@@ -15,7 +15,6 @@ class LearningAgent(Agent):
 		self.name = name
 		self.player_index = player_index
 
-
 	def totuple(self, arr):
 		"""Turn numpy array into a tuple"""
 
@@ -204,7 +203,8 @@ class LearningAgent(Agent):
 			'cows_data.dat'))
 		labels = np.load(os.path.join(
 			'reinforcement_learning_data_final',
-			'labels.dat')).reshape((len(labels), 1))
+			'labels.dat'))
+		labels = labels.reshape((len(labels), 1))
 
 		permutation = np.random.permutation(len(labels))
 
@@ -215,7 +215,7 @@ class LearningAgent(Agent):
 
 
 
-	def train_value_function_approximation(self):
+	def train_value_function_approximation(self, make_move=False, child_states=None, children=0):
 		"""Train a neural network to do value function approximation"""
 
 		batch_size = 192
@@ -233,7 +233,7 @@ class LearningAgent(Agent):
 
 		with tf.device('/gpu:0'):
 
-			with tf.variable_scope('conv') as scope:
+			with tf.variable_scope('conv', reuse=tf.AUTO_REUSE) as scope:
 
 				kernel = tf.get_variable('weights', initializer=tf.truncated_normal([3, 3, 3, 64],
 		                                                          dtype=tf.float32,
@@ -250,7 +250,7 @@ class LearningAgent(Agent):
 				conv_activated = tf.nn.relu(out, name='conv_output')
 
 
-			with tf.variable_scope('layer_1') as scope:
+			with tf.variable_scope('layer_1', reuse=tf.AUTO_REUSE) as scope:
 
 				conv_board_shape = conv_activated.get_shape()
 				flat_board_shape = int(np.prod(conv_board_shape[1:]))
@@ -270,7 +270,7 @@ class LearningAgent(Agent):
 				flat_activated = tf.nn.relu(out, name='flat_output')
 
 
-			with tf.variable_scope('layer_2') as scope:
+			with tf.variable_scope('layer_2', reuse=tf.AUTO_REUSE) as scope:
 
 				concatenated = tf.concat([flat_activated, cows_input], axis=1)
 
@@ -288,7 +288,7 @@ class LearningAgent(Agent):
 				conc_activated = tf.nn.relu(out, name='flat_output')
 
 
-			with tf.variable_scope('layer_3') as scope:
+			with tf.variable_scope('layer_3', reuse=tf.AUTO_REUSE) as scope:
 
 				weights = tf.get_variable('weights', initializer=tf.truncated_normal([128, 1],
 		                                                          dtype=tf.float32,
@@ -304,28 +304,136 @@ class LearningAgent(Agent):
 				output_value = tf.nn.tanh(out, name='output_value')
 
 
-			with tf.variable_scope('last') as scope:
+			with tf.variable_scope('last', reuse=tf.AUTO_REUSE) as scope:
 
 				loss = tf.losses.mean_squared_error(labels, output_value)
 
 				optimizer = tf.train.AdadeltaOptimizer(learning_rate=1e-3)
 				train_op = optimizer.minimize(loss)
 
-				tf.summary.scalar('loss', loss)
-				merged = tf.summary.merge_all()
-				tensorboard_writer = tf.summary.FileWriter('tensorboard_data', sess.graph)
 
+		saver = tf.train.Saver()
 
 		with tf.Session() as sess:
 
-			init_op = tf.local_variables_initializer()
+			if make_move:
+				saver.restore(sess, "./reinforcement_learning_model/model.ckpt")
+				
+				feed_dict = {
+								board_input : child_states[0],
+								cows_input : child_states[1],
+								labels : child_states[2]
+							}
 
-			sess.run(init_op)
+				rez = sess.run(output_value, feed_dict=feed_dict)[0]
+				return np.argmax(rez[:children])
 
+			else:
+
+				# collect data for Tensorboard
+				with tf.device('/cpu:0'):
+
+					tf.summary.scalar('loss', loss)
+					merged = tf.summary.merge_all()
+					tensorboard_writer = tf.summary.FileWriter('tensorboard_data', sess.graph)
+
+
+				init_op = tf.global_variables_initializer()
+				sess.run(init_op)
+
+				input_data = self.load_data()
+				dataset_divider = int(5 * len(input_data[0]) // 6)
+
+				training_board = input_data[0][:dataset_divider]
+				training_cows = input_data[1][:dataset_divider]
+				training_labels = input_data[2][:dataset_divider]
+
+				validation_board = input_data[0][dataset_divider:]
+				validation_cows = input_data[1][dataset_divider:]
+				validation_labels = input_data[2][dataset_divider:]
+
+				best_loss = 9999
+
+				epoch = 2
+				max_epochs = 10
+
+				while epoch < max_epochs:
+
+					# training
+					for step in range(0, dataset_divider, batch_size):
+
+						try:
+							feed_dict = {
+								prob : 0.5,
+								board_input : training_board[step:step + batch_size],
+								cows_input : training_cows[step:step + batch_size],
+								labels : training_labels[step:step + batch_size]
+							}
+
+							_, loss_value, summary = sess.run([train_op, loss, merged],
+							feed_dict = feed_dict)
+
+							tensorboard_writer.add_summary(summary,
+							 (epoch * dataset_divider + step) // batch_size)
+
+						except ValueError:
+							pass
+
+
+					total_loss = 0
+					loss_count = 0
+
+					# validation
+					for step in range(0, (len(input_data[0]) - dataset_divider) // 6, batch_size):
+
+						try:
+							feed_dict = {
+								board_input : validation_board[step:step + batch_size],
+								cows_input : validation_cows[step:step + batch_size],
+								labels : validation_labels[step:step + batch_size]
+							}
+
+							loss_value = sess.run(loss, feed_dict = feed_dict)
+
+							total_loss += loss_value
+							loss_count += 1
+
+						except ValueError:
+							pass
+
+					epoch += 1
+					validation_loss = total_loss / loss_count
+
+					if validation_loss < best_loss:
+						best_loss = validation_loss
+						saver.save(sess, "./reinforcement_learning_model/model.ckpt")
+
+					print('epoch {0} loss {1:.4f}'.format(epoch, validation_loss))
 
 
 
 	def make_move(self, current_state):
 		"""Enforce the agent to make his move"""
+
+		batch_size = 192
+
+		test_board  = np.zeros((batch_size, 3, 3, 3))
+		test_cows   = np.zeros((batch_size, 2))
+		test_labels = np.zeros((batch_size, 1)) 
+
+		new_states = current_state.expand_states()
+
+		if len(new_states) == 0:
+			return None
+
+		for i, state in enumerate(new_states):
+
+			desc = self.state_descriptor(state, self.player_index)
+			test_board[i] = np.asarray(desc[0])
+			test_cows[i]  = np.asarray([desc[1], desc[2]])
+
+		return new_states[self.train_value_function_approximation(
+			True, (test_board, test_cows, test_labels), len(new_states))]
+ 
 
 		
