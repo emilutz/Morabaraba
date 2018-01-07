@@ -1,3 +1,4 @@
+import os
 import math
 import numpy as np
 import tensorflow as tf
@@ -193,9 +194,25 @@ class LearningAgent(Agent):
 
 
 	def load_data(self):
+		"""Loads the training data from disk"""
 
-		
-		
+		board_data = np.load(os.path.join(
+			'reinforcement_learning_data_final',
+			'board_data.dat'))
+		cows_data = np.load(os.path.join(
+			'reinforcement_learning_data_final',
+			'cows_data.dat'))
+		labels = np.load(os.path.join(
+			'reinforcement_learning_data_final',
+			'labels.dat')).reshape((len(labels), 1))
+
+		permutation = np.random.permutation(len(labels))
+
+		return (board_data[permutation],
+		        cows_data[permutation],
+		        labels[permutation])
+
+
 
 
 	def train_value_function_approximation(self):
