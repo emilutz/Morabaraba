@@ -170,7 +170,7 @@ class LearningAgent(Agent):
 
 				# rotate board
 				for r in range(4):
-					board_data[counter] = np.rot(np.asarray(key[0]), k=rot, axis=(1, 2))
+					board_data[counter] = np.rot90(np.asarray(key[0]), k=r, axes=(1, 2))
 					cows_data[counter] = np.asarray([key[1], key[2]])
 					labels[counter] = value[1] / value[0]
 
