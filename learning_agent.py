@@ -225,10 +225,16 @@ class LearningAgent(Agent):
 				flat_board_shape = int(np.prod(conv_board_shape[1:]))
 				flat_board = tf.reshape(conv_activated, [batch_size, flat_board_shape])
 
-				weights = tf.get_variable('weights', initializer=tf.truncated_normal([flat_board_shape, ],
+				weights = tf.get_variable('weights', initializer=tf.truncated_normal([flat_board_shape, 128],
 		                                                          dtype=tf.float32,
 		                                                          mean=0,
 		                                                          stddev=1e-1))
+
+				bias = tf.get_variable('bias', initializer=tf.truncated_normal([1, 128],
+		                                                          dtype=tf.float32,
+		                                                          mean=0,
+		                                                          stddev=1e-1))
+
 				
 
 
