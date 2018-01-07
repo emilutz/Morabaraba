@@ -414,22 +414,23 @@ class Main:
 
 if __name__ == '__main__':
 
-	random = RandomAgent(name='Random', player_index=2)
-	pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=5000)
-	search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=5000)
-	human = HumanAgent(name='Emilutz')
+	# random = RandomAgent(name='Random', player_index=2)
+	# pulica = SearchAgent(name='pulica', player_index=1, expanding_complexity=5000)
+	# search = SearchAgent(name='Sotirios', player_index=2, expanding_complexity=5000)
+	# human = HumanAgent(name='Emilutz')
 
-	runner = Main(human, search)
-	plt.show()
+	# runner = Main(human, search)
+	# plt.show()
 
-	agents = []
+	# agents = []
 	# agents.append(RandomAgent(name='Random', player_index=1))
 	# agents.append(SearchAgent(name='Sotirios_500', player_index=1, expanding_complexity=500))
 	# agents.append(SearchAgent(name='Sotirios_750', player_index=1, expanding_complexity=750))
 	# agents.append(SearchAgent(name='Sotirios_1000', player_index=1, expanding_complexity=1000))
 	# agents.append(SearchAgent(name='Sotirios_2000', player_index=1, expanding_complexity=2000))
 
-	# monty = LearningAgent(name='monty', player_index=0)
+	monty = LearningAgent(name='monty', player_index=0)
+	monty.train_value_function_approximation()
 
 	# monty.create_data(1, agents)
 
